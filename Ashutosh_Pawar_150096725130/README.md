@@ -5,6 +5,15 @@ JWT + bcrypt for role-based auth (student vs librarian), express-rate-limit
 for abuse protection, and Swagger UI for live docs. Ships with a small plain
 HTML frontend in `frontend/`.
 
+## Live demo
+
+- Frontend (Vercel): https://library-webapp-sable.vercel.app
+- API (Render): https://assignment-6-library-management-api-2oy9.onrender.com
+- Swagger UI: https://assignment-6-library-management-api-2oy9.onrender.com/api-docs
+
+The API runs on Render's free tier, so the first request after a period of
+inactivity can take up to a minute while the server wakes up.
+
 ## Setup
 
 ```bash
@@ -33,6 +42,17 @@ npm install
 - API root: `http://localhost:5000/`
 - Swagger UI: `http://localhost:5000/api-docs`
 - Frontend: open `frontend/index.html` in a browser (or serve the folder).
+  Opened locally it talks to `http://localhost:5000`, otherwise to the Render
+  URL set in `frontend/config.js`.
+
+## Deployment
+
+- **API** on Render: root directory `Ashutosh_Pawar_150096725130`, build
+  `npm install`, start `npm start`. Set `JWT_SECRET`, `LIBRARIAN_SECRET_KEY`
+  and `FIREBASE_SERVICE_ACCOUNT` (the whole service account JSON, since the
+  key file is not committed). Render provides `PORT`. `trust proxy` is on so
+  the rate limiter sees each client's real IP behind Render's proxy.
+- **Frontend** on Vercel: the `frontend/` folder deployed as static files.
 
 ## Roles
 

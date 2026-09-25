@@ -6,7 +6,7 @@ const isLocal =
 
 const API_BASE_URL = isLocal
   ? "http://localhost:5000"
-  : "https://itm-library-management-api.onrender.com";
+  : "https://assignment-6-library-management-api-2oy9.onrender.com";
 
 // fetch wrapper: adds the JWT if we have one and returns { response, data }
 function callApi(path, method, body) {
