@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Overdue Books</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="config.js"></script>
+  </head>
+  <body>
+    <h1>Overdue Books</h1>
+
+    <button onclick="location.href = 'books.html'">Back to Catalog</button>
+    <button onclick="location.href = 'records.html'">ALL RECORDS</button>
+    <button onclick="handleLogout()">LOGOUT</button>
+
+    <br /><br />
+
+    <p id="empty" style="display: none">No overdue books. 🎉</p>
+
+    <table border="1" id="table">
+      <thead>
+        <tr>
+          <th>Book</th>
+          <th>User ID</th>
+          <th>Borrowed</th>
+          <th>Due</th>
+          <th>Days Late</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <script>
+      function fmt(value) {
+        return value ? new Date(value).toLocaleString() : "-";
+      }
+
+      // whole days between the due date and now
+      function daysLate(dueDate) {
+        const diff = Date.now() - new Date(dueDate).getTime();
+        return Math.floor(diff / (1000 * 60 * 60 * 24));
+      }
+
+      function loadOverdue() {
+        callApi("/reports/overdue")
+          .then(({ response, data }) => {
+            console.log(data);
+            if (handleUnauthorized(response, data)) return;
+
+            if (response.status !== 200) {
+              showError(data.message || "could not load overdue list!");
+              return;
+            }
+
+            if (data.records.length === 0) {
+              document.getElementById("table").style.display = "none";
+              document.getElementById("empty").style.display = "";
+              return;
+            }
+
+            const rows = document.getElementById("rows");
+            rows.innerHTML = "";
+
+            data.records.forEach((r) => {
+              const tr = document.createElement("tr");
+              [
+                r.bookTitle,
+                r.userId,
+                fmt(r.borrowDate),
+                fmt(r.dueDate),
+                daysLate(r.dueDate),
+              ].forEach((value) => {
+                const td = document.createElement("td");
+                td.textContent = value;
+                tr.appendChild(td);
+              });
+              rows.appendChild(tr);
+            });
+          })
+          .catch((error) => {
+            console.log(error);
+            showError("could not reach the server!");
+          });
+      }
+
+      if (requireRole("librarian")) {
+        loadOverdue();
+      }
+    </script>
+  </body>
+</html>

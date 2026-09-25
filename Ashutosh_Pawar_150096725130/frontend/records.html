@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Borrow Records</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="config.js"></script>
+  </head>
+  <body>
+    <h1>All Borrow Records</h1>
+
+    <button onclick="location.href = 'books.html'">Back to Catalog</button>
+    <button onclick="location.href = 'overdue.html'">OVERDUE ONLY</button>
+    <button onclick="handleLogout()">LOGOUT</button>
+
+    <br /><br />
+
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Book</th>
+          <th>User ID</th>
+          <th>Borrowed</th>
+          <th>Due</th>
+          <th>Returned</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <script>
+      function fmt(value) {
+        return value ? new Date(value).toLocaleString() : "-";
+      }
+
+      function loadRecords() {
+        callApi("/librarian/borrow-records")
+          .then(({ response, data }) => {
+            console.log(data);
+            if (handleUnauthorized(response, data)) return;
+
+            if (response.status !== 200) {
+              showError(data.message || "could not load records!");
+              return;
+            }
+
+            const rows = document.getElementById("rows");
+            rows.innerHTML = "";
+
+            data.records.forEach((r) => {
+              const tr = document.createElement("tr");
+              [
+                r.bookTitle,
+                r.userId,
+                fmt(r.borrowDate),
+                fmt(r.dueDate),
+                fmt(r.returnDate),
+                r.status,
+              ].forEach((value) => {
+                const td = document.createElement("td");
+                td.textContent = value;
+                tr.appendChild(td);
+              });
+              rows.appendChild(tr);
+            });
+          })
+          .catch((error) => {
+            console.log(error);
+            showError("could not reach the server!");
+          });
+      }
+
+      if (requireRole("librarian")) {
+        loadRecords();
+      }
+    </script>
+  </body>
+</html>

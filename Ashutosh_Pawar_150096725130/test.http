@@ -1,0 +1,87 @@
+### Health check
+GET http://localhost:5000/
+
+### Register a student
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane@university.edu",
+  "password": "secret123"
+}
+
+### Register a librarian (needs the secret key from .env)
+POST http://localhost:5000/api/auth/register-librarian
+Content-Type: application/json
+
+{
+  "name": "Mr. Librarian",
+  "email": "librarian@university.edu",
+  "password": "secret123",
+  "secretKey": "super-secret-librarian-key"
+}
+
+### Login (copy the token from the response into the @token var below)
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "librarian@university.edu",
+  "password": "secret123"
+}
+
+@token = PASTE_TOKEN_HERE
+
+### Profile
+GET http://localhost:5000/api/auth/profile
+Authorization: Bearer {{token}}
+
+### List books (public) -- with search + category
+GET http://localhost:5000/api/books?search=algorithms&category=Computer Science
+
+### Create a book (librarian only)
+POST http://localhost:5000/api/books
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Introduction to Algorithms",
+  "author": "Thomas H. Cormen",
+  "isbn": "978-0262033848",
+  "category": "Computer Science",
+  "totalCopies": 10
+}
+
+### Update a book (librarian only)
+PUT http://localhost:5000/api/books/PUT_BOOK_ID_HERE
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "totalCopies": 12
+}
+
+### Delete a book (librarian only)
+DELETE http://localhost:5000/api/books/PUT_BOOK_ID_HERE
+Authorization: Bearer {{token}}
+
+### Borrow a book (student only)
+POST http://localhost:5000/api/books/PUT_BOOK_ID_HERE/borrow
+Authorization: Bearer {{token}}
+
+### Return a book (student only)
+POST http://localhost:5000/api/books/PUT_BOOK_ID_HERE/return
+Authorization: Bearer {{token}}
+
+### My borrowing history (student only)
+GET http://localhost:5000/api/books/my-history
+Authorization: Bearer {{token}}
+
+### All borrow records (librarian only)
+GET http://localhost:5000/api/librarian/borrow-records
+Authorization: Bearer {{token}}
+
+### Overdue report (librarian only)
+GET http://localhost:5000/api/reports/overdue
+Authorization: Bearer {{token}}

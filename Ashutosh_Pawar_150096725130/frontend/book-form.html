@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Book Form</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="config.js"></script>
+  </head>
+  <body>
+    <h1 id="heading">Add Book</h1>
+
+    <div>
+      <label for="title">Title : </label>
+      <input type="text" id="title" />
+    </div>
+
+    <div>
+      <label for="author">Author : </label>
+      <input type="text" id="author" />
+    </div>
+
+    <div>
+      <label for="isbn">ISBN : </label>
+      <input type="text" id="isbn" />
+    </div>
+
+    <div>
+      <label for="category">Category : </label>
+      <input type="text" id="category" />
+    </div>
+
+    <div>
+      <label for="totalCopies">Total Copies : </label>
+      <input type="number" id="totalCopies" min="1" />
+    </div>
+
+    <br />
+
+    <div>
+      <button onclick="handleSubmit()">Save</button>
+      <button onclick="location.href = 'books.html'">Back</button>
+    </div>
+
+    <script>
+      // ?id=<bookId> present -> edit mode, otherwise add mode
+      const bookId = new URLSearchParams(location.search).get("id");
+
+      function loadBook() {
+        callApi(`/books/${bookId}`)
+          .then(({ response, data }) => {
+            if (response.status !== 200) {
+              showError(data.message || "could not load book!");
+              return;
+            }
+            const book = data.book;
+            document.getElementById("title").value = book.title;
+            document.getElementById("author").value = book.author;
+            document.getElementById("isbn").value = book.isbn;
+            document.getElementById("category").value = book.category;
+            document.getElementById("totalCopies").value = book.totalCopies;
+          })
+          .catch((error) => {
+            console.log(error);
+            showError("could not reach the server!");
+          });
+      }
+
+      function handleSubmit() {
+        const body = {
+          title: document.getElementById("title").value,
+          author: document.getElementById("author").value,
+          isbn: document.getElementById("isbn").value,
+          category: document.getElementById("category").value,
+          totalCopies: Number(document.getElementById("totalCopies").value),
+        };
+
+        const path = bookId ? `/books/${bookId}` : "/books";
+        const method = bookId ? "PUT" : "POST";
+
+        callApi(path, method, body)
+          .then(({ response, data }) => {
+            console.log(data);
+            if (handleUnauthorized(response, data)) return;
+
+            if (response.status === 200 || response.status === 201) {
+              showSuccess(bookId ? "book updated" : "book added").then(() => {
+                location.href = "books.html";
+              });
+            } else {
+              showError(data.message || "Something went wrong!");
+            }
+          })
+          .catch((error) => {
+            console.log(error);
+            showError("could not reach the server!");
+          });
+      }
+
+      if (requireRole("librarian")) {
+        if (bookId) {
+          document.getElementById("heading").textContent = "Edit Book";
+          loadBook();
+        }
+      }
+    </script>
+  </body>
+</html>

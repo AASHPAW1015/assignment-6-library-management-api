@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Catalog</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="config.js"></script>
+  </head>
+  <body>
+    <h1>📚 Book Catalog</h1>
+
+    <div id="nav"></div>
+
+    <br />
+
+    <div>
+      <label for="search">Search : </label>
+      <input type="text" id="search" placeholder="title, author or ISBN" />
+      <label for="category">Category : </label>
+      <input type="text" id="category" placeholder="e.g. Computer Science" />
+      <button onclick="loadBooks()">SEARCH</button>
+      <button onclick="clearFilters()">SHOW ALL</button>
+    </div>
+
+    <br />
+
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Author</th>
+          <th>ISBN</th>
+          <th>Category</th>
+          <th>Total</th>
+          <th>Available</th>
+          <th id="action-head">ACTION</th>
+        </tr>
+      </thead>
+      <tbody id="book-rows"></tbody>
+    </table>
+
+    <script>
+      const role = getRole(); // "student", "librarian" or null (public)
+
+      // top nav changes with who is looking
+      function renderNav() {
+        const nav = document.getElementById("nav");
+        if (role === "student") {
+          nav.innerHTML = `
+            <button onclick="location.href='my-history.html'">MY HISTORY</button>
+            <button onclick="handleLogout()">LOGOUT</button>`;
+        } else if (role === "librarian") {
+          nav.innerHTML = `
+            <button onclick="location.href='book-form.html'">ADD BOOK</button>
+            <button onclick="location.href='records.html'">BORROW RECORDS</button>
+            <button onclick="location.href='overdue.html'">OVERDUE</button>
+            <button onclick="handleLogout()">LOGOUT</button>`;
+        } else {
+          nav.innerHTML = `
+            <button onclick="location.href='login.html'">LOGIN</button>
+            <button onclick="location.href='register.html'">REGISTER</button>`;
+        }
+        // only students/librarians get an action column
+        document.getElementById("action-head").style.display =
+          role === "student" || role === "librarian" ? "" : "none";
+      }
+
+      function loadBooks() {
+        const search = document.getElementById("search").value.trim();
+        const category = document.getElementById("category").value.trim();
+
+        const params = new URLSearchParams();
+        if (search) params.set("search", search);
+        if (category) params.set("category", category);
+        const query = params.toString() ? `?${params.toString()}` : "";
+
+        callApi(`/books${query}`)
+          .then(({ response, data }) => {
+            console.log(data);
+
+            if (response.status !== 200) {
+              showError(data.message || "could not load books!");
+              return;
+            }
+
+            const rows = document.getElementById("book-rows");
+            rows.innerHTML = "";
+
+            data.books.forEach((book) => {
+              const tr = document.createElement("tr");
+
+              [
+                book.title,
+                book.author,
+                book.isbn,
+                book.category,
+                book.totalCopies,
+                book.availableCopies,
+              ].forEach((value) => {
+                const td = document.createElement("td");
+                td.textContent = value === null ? "-" : value;
+                tr.appendChild(td);
+              });
+
+              if (role === "student") {
+                const td = document.createElement("td");
+                td.appendChild(
+                  makeButton("BORROW", () => borrow(book.id), book.availableCopies <= 0),
+                );
+                td.appendChild(makeButton("RETURN", () => giveBack(book.id)));
+                tr.appendChild(td);
+              } else if (role === "librarian") {
+                const td = document.createElement("td");
+                td.appendChild(
+                  makeButton("EDIT", () => {
+                    location.href = `book-form.html?id=${book.id}`;
+                  }),
+                );
+                td.appendChild(makeButton("DELETE", () => remove(book.id)));
+                tr.appendChild(td);
+              }
+
+              rows.appendChild(tr);
+            });
+          })
+          .catch((error) => {
+            console.log(error);
+            showError("could not load books!");
+          });
+      }
+
+      function makeButton(label, onClick, disabled) {
+        const button = document.createElement("button");
+        button.textContent = label;
+        button.onclick = onClick;
+        if (disabled) button.disabled = true;
+        return button;
+      }
+
+      function clearFilters() {
+        document.getElementById("search").value = "";
+        document.getElementById("category").value = "";
+        loadBooks();
+      }
+
+      function borrow(id) {
+        callApi(`/books/${id}/borrow`, "POST")
+          .then(({ response, data }) => {
+            if (handleUnauthorized(response, data)) return;
+            if (response.status === 201) {
+              showSuccess("book borrowed!");
+              loadBooks();
+            } else {
+              showError(data.message || "could not borrow!");
+            }
+          })
+          .catch((error) => {
+            console.log(error);
+            showError("could not reach the server!");
+          });
+      }
+
+      function giveBack(id) {
+        callApi(`/books/${id}/return`, "POST")
+          .then(({ response, data }) => {
+            if (handleUnauthorized(response, data)) return;
+            if (response.status === 200) {
+              showSuccess("book returned!");
+              loadBooks();
+            } else {
+              showError(data.message || "could not return!");
+            }
+          })
+          .catch((error) => {
+            console.log(error);
+            showError("could not reach the server!");
+          });
+      }
+
+      function remove(id) {
+        Swal.fire({
+          icon: "warning",
+          title: "Are you sure?",
+          text: "this book will be removed from the catalog",
+          showCancelButton: true,
+          confirmButtonText: "Yes, delete it",
+        }).then((result) => {
+          if (!result.isConfirmed) return;
+
+          callApi(`/books/${id}`, "DELETE")
+            .then(({ response, data }) => {
+              if (handleUnauthorized(response, data)) return;
+              if (response.status === 200) {
+                showSuccess("book deleted");
+                loadBooks();
+              } else {
+                showError(data.message || "Something went wrong!");
+              }
+            })
+            .catch((error) => {
+              console.log(error);
+              showError("could not reach the server!");
+            });
+        });
+      }
+
+      renderNav();
+      loadBooks();
+    </script>
+  </body>
+</html>
